@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %} {{setting('siteName')}} {% endblock %}</title>
+        <link rel="icon" href="{{ asset(setting('favicon').getWebPath()|default('/images/favicon.png')) }}" type="image/png"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        {% block stylesheets %}
+            {{ encore_entry_link_tags('admin') }}
+        {% endblock %}
+
+        {% block javascripts %}
+            {{ encore_entry_script_tags('admin') }}
+        {% endblock %}
+    </head>
+    <body>
+        {% block body %}{% endblock %}
+    </body>
+</html>
