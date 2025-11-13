@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Repository\MediaRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\MediaRepository;
+use Gedmo\Mapping\Annotation as Gedmo;
 use Symfony\Component\HttpFoundation\File\File;
+
 
 
 #[ORM\Entity(repositoryClass: MediaRepository::class)]
 #[ORM\HasLifecycleCallbacks]
 class Media
 {
-    
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -29,8 +32,17 @@ class Media
     private ?string $extension = null;
 
     private $file;
-     
+
     private $tempFilename;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Gedmo\Timestampable(on: 'create')]
+    private ?\DateTimeInterface $createdAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[Gedmo\Timestampable(on: 'update')]
+    private ?\DateTimeInterface $updatedAt = null;
+
 
 
     public function getId(): ?int
@@ -67,20 +79,20 @@ class Media
         $this->file = $file;
         if (null !== $this->fileName) {
             $this->tempFilename = $this->fileName;
- 
+
             $this->fileName = null;
             $this->alt = null;
             $this->extension = null;
         }
     }
- 
+
     public function getFile()
     {
         return $this->file;
     }
-     
-     
-  
+
+
+
     #[ORM\PrePersist()]
     #[ORM\PreUpdate()]
     public function preUpload()
@@ -88,43 +100,42 @@ class Media
         if (null === $this->file) {
             return;
         }
-        if($this->file->guessExtension()){
+        if ($this->file->guessExtension()) {
 
-            $this->fileName = uniqid().'.'.$this->file->guessExtension();
+            $this->fileName = uniqid() . '.' . $this->file->guessExtension();
             $this->extension = $this->file->guessExtension();
         }
- 
+
         $this->alt = $this->file->getClientOriginalName();
-     
     }
- 
-   
+
+
     #[ORM\PostPersist()]
     #[ORM\PostUpdate()]
     public function upload()
-    { 
+    {
         if (null === $this->file) {
             return;
         }
 
         if (null !== $this->tempFilename) {
-            $oldFile = $this->getUploadRootDir().DIRECTORY_SEPARATOR.$this->id.'.'.$this->tempFilename;
+            $oldFile = $this->getUploadRootDir() . DIRECTORY_SEPARATOR . $this->id . '.' . $this->tempFilename;
             if (file_exists($oldFile)) {
                 unlink($oldFile);
             }
         }
-        $this->file->move($this->getUploadRootDir(),$this->getFileName());
+        $this->file->move($this->getUploadRootDir(), $this->getFileName());
         $this->file = null;
     }
- 
-    
+
+
     #[ORM\PreRemove()]
     public function preRemoveUpload()
     {
-        $this->tempFilename = $this->getUploadRootDir().DIRECTORY_SEPARATOR.$this->id.'.'.$this->fileName;
+        $this->tempFilename = $this->getUploadRootDir() . DIRECTORY_SEPARATOR . $this->id . '.' . $this->fileName;
     }
- 
-   
+
+
     #[ORM\PostRemove()]
     public function removeUpload()
     {
@@ -132,17 +143,17 @@ class Media
             unlink($this->tempFilename);
         }
     }
- 
+
     public function getUploadDir()
     {
         return 'uploads/media';
     }
- 
+
     protected function getUploadRootDir()
     {
         return __DIR__ . '/../../public/' . $this->getUploadDir();
     }
-     
+
     public function getWebPath()
     {
         return $this->getUploadDir() . '/' . $this->getFileName();
@@ -150,7 +161,7 @@ class Media
 
     /**
      * Get the value of fileName
-     */ 
+     */
     public function getFileName()
     {
         return $this->fileName;
@@ -160,7 +171,7 @@ class Media
      * Set the value of fileName
      *
      * @return  self
-     */ 
+     */
     public function setFileName($fileName)
     {
         $this->fileName = $fileName;
@@ -178,4 +189,27 @@ class Media
         return '/' . $this->getWebPath();
     }
 
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeInterface
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(?\DateTimeInterface $updatedAt): static
+    {
+        $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
 }
