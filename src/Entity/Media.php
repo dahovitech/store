@@ -6,6 +6,8 @@ namespace App\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use App\Repository\MediaRepository;
 use Gedmo\Mapping\Annotation as Gedmo;
 use Symfony\Component\HttpFoundation\File\File;
@@ -42,6 +44,39 @@ class Media
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     #[Gedmo\Timestampable(on: 'update')]
     private ?\DateTimeInterface $updatedAt = null;
+
+    #[ORM\Column(type: 'string', length: 50, nullable: true)]
+    private ?string $type = null; // 'main_image', 'gallery', 'documentation', 'video', etc.
+
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $fileSize = null;
+
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $width = null;
+
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $height = null;
+
+    #[ORM\Column(type: 'string', length: 10, nullable: true)]
+    private ?string $mimeType = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $metadata = null; // Données EXIF, GPS, etc.
+
+    #[ORM\Column(type: 'integer')]
+    private int $sortOrder = 0;
+
+    #[ORM\Column(type: 'boolean')]
+    private bool $isActive = true;
+
+    // Relations avec les produits
+    #[ORM\ManyToMany(targetEntity: Product::class, mappedBy: 'gallery')]
+    private Collection $products;
+
+    public function __construct()
+    {
+        $this->products = new ArrayCollection();
+    }
 
 
 
@@ -211,5 +246,163 @@ class Media
         $this->updatedAt = $updatedAt;
 
         return $this;
+    }
+
+    public function getType(): ?string
+    {
+        return $this->type;
+    }
+
+    public function setType(?string $type): static
+    {
+        $this->type = $type;
+        return $this;
+    }
+
+    public function getFileSize(): ?int
+    {
+        return $this->fileSize;
+    }
+
+    public function setFileSize(?int $fileSize): static
+    {
+        $this->fileSize = $fileSize;
+        return $this;
+    }
+
+    public function getWidth(): ?int
+    {
+        return $this->width;
+    }
+
+    public function setWidth(?int $width): static
+    {
+        $this->width = $width;
+        return $this;
+    }
+
+    public function getHeight(): ?int
+    {
+        return $this->height;
+    }
+
+    public function setHeight(?int $height): static
+    {
+        $this->height = $height;
+        return $this;
+    }
+
+    public function getMimeType(): ?string
+    {
+        return $this->mimeType;
+    }
+
+    public function setMimeType(?string $mimeType): static
+    {
+        $this->mimeType = $mimeType;
+        return $this;
+    }
+
+    public function getMetadata(): ?array
+    {
+        return $this->metadata;
+    }
+
+    public function setMetadata(?array $metadata): static
+    {
+        $this->metadata = $metadata;
+        return $this;
+    }
+
+    public function getSortOrder(): int
+    {
+        return $this->sortOrder;
+    }
+
+    public function setSortOrder(int $sortOrder): static
+    {
+        $this->sortOrder = $sortOrder;
+        return $this;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->isActive;
+    }
+
+    public function setIsActive(bool $isActive): static
+    {
+        $this->isActive = $isActive;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Product>
+     */
+    public function getProducts(): Collection
+    {
+        return $this->products;
+    }
+
+    public function addProduct(Product $product): static
+    {
+        if (!$this->products->contains($product)) {
+            $this->products->add($product);
+            $product->addGallery($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProduct(Product $product): static
+    {
+        if ($this->products->removeElement($product)) {
+            $product->removeGallery($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get formatted file size
+     */
+    public function getFormattedFileSize(): string
+    {
+        if (!$this->fileSize) {
+            return '0 B';
+        }
+
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $unitIndex = 0;
+        $fileSize = $this->fileSize;
+
+        while ($fileSize >= 1024 && $unitIndex < count($units) - 1) {
+            $fileSize /= 1024;
+            $unitIndex++;
+        }
+
+        return round($fileSize, 2) . ' ' . $units[$unitIndex];
+    }
+
+    /**
+     * Check if media is an image
+     */
+    public function isImage(): bool
+    {
+        return in_array($this->mimeType, [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'
+        ]);
+    }
+
+    /**
+     * Get aspect ratio
+     */
+    public function getAspectRatio(): ?float
+    {
+        if (!$this->width || !$this->height) {
+            return null;
+        }
+
+        return round($this->width / $this->height, 2);
     }
 }
